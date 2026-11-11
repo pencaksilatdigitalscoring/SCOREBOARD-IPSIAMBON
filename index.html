@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Monitor Scoreboard TGR - Kejuaraan Pencak Silat</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK (Compatibility Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            /* Variabel default (Netral/Standar) */
+            --panel-bg: rgba(15, 15, 15, 0.75); 
+            --border-color: #444444;
+            --shadow-color: rgba(255, 255, 255, 0.1);
+            
+            --border-gold: #cba052;
+            --text-gold: #f6d365;
+            --text-gold-light: #ffeba8;
+            --text-white: #ffffff;
+        }
+
+        /* TEMA SUDUT BIRU */
+        body.theme-biru {
+            --panel-bg: rgba(7, 20, 45, 0.75);
+            --border-color: #1f5f99;
+            --shadow-color: rgba(0, 150, 255, 0.2);
+        }
+        body.theme-biru .theme-overlay {
+            background: radial-gradient(circle at top center, rgba(10, 31, 63, 0.6) 0%, rgba(3, 10, 22, 0.9) 100%);
+        }
+
+        /* TEMA SUDUT MERAH */
+        body.theme-merah {
+            --panel-bg: rgba(45, 7, 7, 0.75);
+            --border-color: #991f1f;
+            --shadow-color: rgba(255, 50, 50, 0.2);
+        }
+        body.theme-merah .theme-overlay {
+            background: radial-gradient(circle at top center, rgba(63, 10, 10, 0.6) 0%, rgba(22, 3, 3, 0.9) 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-white);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+        }
+
+        /* BACKGROUND VIDEO FULLSCREEN */
+        #bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: -2;
+        }
+
+        /* OVERLAY WARNA (NETRAL/BIRU/MERAH) */
+        .theme-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            transition: all 0.5s ease;
+            background: radial-gradient(circle at top center, rgba(26, 26, 46, 0.6) 0%, rgba(0, 0, 0, 0.85) 100%);
+        }
+
+        #scoreboard-section {
+            width: 100%;
+            height: 100%;
+            padding: 1.5vh 2vw 3vh 2vw; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1;
+        }
+
+        /* BORDER STYLES */
+        .panel {
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            box-shadow: 0 0 15px var(--shadow-color), inset 0 0 20px rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            transition: all 0.5s ease;
+            backdrop-filter: blur(3px);
+        }
+
+        .border-gold { border-color: var(--border-gold); }
+
+        /* TEXT GRADIENTS */
+        .text-gradient-gold {
+            background: linear-gradient(to bottom, #fffbb3 0%, #f6c845 40%, #c18815 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 4px 15px rgba(246, 200, 69, 0.3);
+        }
+
+        /* 1. HEADER SECTION */
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 12vh;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding-bottom: 1vh;
+        }
+        .header-logo { height: 100px; max-height: 100%; width: auto; object-fit: contain; }
+        .header-title-container { text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        .header-title-top { font-size: 2.2vh; font-weight: 700; letter-spacing: 2px; }
+        .header-title-main { font-size: 5vh; font-weight: 800; text-transform: uppercase; margin: -0.5vh 0; letter-spacing: 3px; }
+        .header-title-sub { font-size: 2vh; font-weight: 600; letter-spacing: 4px; }
+
+        /* 2. INFO SECTION */
+        .info-section {
+            display: grid;
+            grid-template-columns: auto 1fr 1fr;
+            gap: 2vw;
+            height: 15vh;
+            align-items: center;
+        }
+        
+        .avatar-box {
+            height: 100%;
+            aspect-ratio: 1/1.2;
+            border: 2px solid var(--border-color);
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            overflow: hidden;
+            box-shadow: 0 0 15px var(--shadow-color);
+        }
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+        .info-text-box { display: flex; flex-direction: column; justify-content: center; }
+        .info-label { font-size: 1.8vh; color: rgba(255,255,255,0.7); text-transform: uppercase; margin-bottom: 0.2vh;}
+        .info-value { font-size: 3vh; font-weight: 700; color: var(--text-gold-light); text-transform: uppercase; margin-bottom: 0.5vh; line-height: 1.2;}
+        .info-text-right { text-align: right; }
+
+        /* 3. SCORE & TIMER SECTION */
+        .main-score-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2vw;
+            height: 22vh;
+        }
+        .box-wrapper { display: flex; flex-direction: column; }
+        .box-title { text-align: center; font-size: 2.2vh; font-weight: 700; color: var(--text-gold-light); margin-bottom: 0.5vh; text-transform: uppercase; letter-spacing: 1px;}
+        
+        .score-display {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-color: var(--border-gold);
+            border-width: 3px;
+        }
+        .score-number { font-size: 15vh; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+
+        .timer-display {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-width: 3px;
+        }
+        .timer-number { 
+            font-family: 'Share Tech Mono', monospace; 
+            font-size: 12vh; 
+            color: var(--text-white); 
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4); 
+            line-height: 1;
+        }
+
+        /* 4. STATS SECTION */
+        .stats-section {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr;
+            gap: 1vw;
+            height: 11vh;
+        }
+        .stat-box { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0.5vh; }
+        .stat-label { font-size: 1.6vh; color: rgba(255,255,255,0.8); font-weight: 600; text-transform: uppercase; text-align: center; white-space: nowrap; margin-bottom: 0.5vh;}
+        .stat-value { font-size: 4vh; font-weight: 700; line-height: 1;}
+        
+        .val-white { font-family: 'Share Tech Mono', monospace; color: var(--text-white); text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); font-size: 3.5vh !important;}
+        .val-gold { color: var(--text-gold-light); text-shadow: 0 0 10px rgba(246, 200, 69, 0.4); }
+
+        /* 5. JUDGES SECTION */
+        .judges-section {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 0.8vw;
+            height: 18vh;
+        }
+        .judge-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: 0.3s;
+        }
+        .judge-label { font-size: 1.8vh; font-weight: 600; color: #fff; margin-bottom: 0.3vh; }
+        .judge-score { font-size: 4.2vh; font-weight: 800; color: var(--text-gold-light); font-variant-numeric: tabular-nums; }
+        
+        .judge-box.offline { opacity: 0.3; }
+        .judge-box.offline .judge-score { color: #555; }
+
+        @keyframes flashRed {
+            0% { background-color: var(--panel-bg); }
+            50% { background-color: rgba(231, 76, 60, 0.8); border-color: red;}
+            100% { background-color: var(--panel-bg); }
+        }
+        .flash-pinalty { animation: flashRed 1s ease forwards; }
+
+        /* COMPARISON SCREEN OVERRIDE */
+        #sb-comparison-view {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .comp-container { 
+            display: flex; 
+            width: 100%; 
+            gap: 2vw; 
+            flex-grow: 1;
+            margin: 2vh 0;
+            min-height: 50%;
+        }
+        .comp-box { 
+            flex: 1; 
+            padding: 2.5vw; 
+            border-radius: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            border: 3px solid; 
+            background: rgba(0,0,0,0.5); 
+            backdrop-filter: blur(5px);
+            transition: all 0.5s ease; /* Transisi animasi mulus */
+        }
+        .comp-biru { border-color: #007bff; box-shadow: inset 0 0 50px rgba(0,123,255,0.2); }
+        .comp-merah { border-color: #e74c3c; box-shadow: inset 0 0 50px rgba(231,76,60,0.2); }
+        
+        /* EFEK MENYALA UNTUK PEMENANG */
+        .winner-glow {
+            border-color: #ffd700 !important;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.6), inset 0 0 30px rgba(255, 215, 0, 0.3) !important;
+            transform: scale(1.03);
+            z-index: 10;
+        }
+
+        .comp-score-big { font-size: 13vh; font-weight: 800; margin: 1vh 0;}
+        .comp-winner { 
+            text-transform: uppercase; 
+            padding: 1.5vh 4vw; 
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 15, 15, 0.85);
+            margin-bottom: 2vh;
+        }
+        
+        .result-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5vh;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- VIDEO BACKGROUND & OVERLAY -->
+    <video autoplay loop muted playsinline id="bg-video">
+        <source src="https://github.com/pencaksilatdigitalscoring/BRONZE-DIGITAL-SCORING-PENCAK-SILAT/raw/main/Dua_naga_terbang_menyatu_logo_202608012347.mp4" type="video/mp4">
+    </video>
+    <div class="theme-overlay"></div>
+
+    <div id="scoreboard-section">
+        
+        <!-- ================= SINGLE VIEW (DURING MATCH) ================= -->
+        <div id="sb-single-view" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
+            
+            <!-- 1. HEADER -->
+            <div class="header-section">
+                <img src="https://iili.io/nN8K4Hb.jpg" alt="Logo Kiri" class="header-logo">
+                <div class="header-title-container">
+                    <div class="header-title-top">KEJUARAAN PENCAK SILAT</div>
+                    <div class="header-title-main text-gradient-gold">KEJURKOT IPSI KOTA AMBON</div>
+                    <div class="header-title-sub text-gradient-gold">Ambon, 16-18 November 2026</div>
+                </div>
+                <img src="https://iili.io/CZgpAb4.jpg" alt="Logo Kanan" class="header-logo">
+            </div>
+
+            <!-- 2. INFO -->
+            <div class="info-section">
+                <div class="avatar-box panel">
+                    <img id="sb-avatar" src="https://iili.io/CShnhS2.png" alt="Pesilat">
+                </div>
+                <div class="info-text-box">
+                    <div class="info-label">PESILAT:</div>
+                    <div class="info-value" id="sb-name">-</div>
+                    <div class="info-label">KONTINGEN:</div>
+                    <div class="info-value" id="sb-cont">-</div>
+                </div>
+                <div class="info-text-box info-text-right">
+                    <div class="info-label">PARTAI : <span style="color:var(--text-gold-light); font-weight:bold; font-size:2.5vh;" id="sb-partai">-</span></div>
+                    <div class="info-label" style="margin-top:1vh;">KATEGORI: <span style="color:var(--text-gold-light); font-weight:bold; font-size:2.5vh;" id="sb-kategori">-</span></div>
+                    <div class="info-label" style="margin-top:1vh;">BABAK: <span style="color:var(--text-gold-light); font-weight:bold; font-size:2.5vh;" id="sb-babak">FINAL</span></div>
+                </div>
+            </div>
+
+            <!-- 3. SCORE & TIMER -->
+            <div class="main-score-section">
+                <div class="box-wrapper">
+                    <div class="box-title">NILAI AKHIR / FINAL SCORE</div>
+                    <div class="panel score-display border-gold">
+                        <div class="score-number text-gradient-gold" id="sb-final-score">0.000</div>
+                    </div>
+                </div>
+                <div class="box-wrapper">
+                    <div class="box-title">WAKTU / TIMER</div>
+                    <div class="panel timer-display">
+                        <!-- Font Waktu Putih -->
+                        <div class="timer-number timer-shared" id="sb-timer-element">00:00.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. STATS -->
+            <div class="stats-section">
+                <div class="panel stat-box">
+                    <div class="stat-label">STANDAR DEVIASI / STANDARD DEVIATION</div>
+                    <div class="stat-value val-white" id="sb-stdev">0.00000000000</div>
+                </div>
+                <div class="panel stat-box">
+                    <div class="stat-label">MEDIAN</div>
+                    <div class="stat-value val-gold" id="sb-median">0.000</div>
+                </div>
+                <div class="panel stat-box">
+                    <div class="stat-label">TOTAL PENALTY JURI</div>
+                    <div class="stat-value" id="sb-pen-juri">0.00</div>
+                </div>
+                <div class="panel stat-box">
+                    <div class="stat-label">TOTAL PENALTY DEWAN</div>
+                    <div class="stat-value" id="sb-pen-dewan">0.00</div>
+                </div>
+            </div>
+
+            <!-- 5. JUDGES -->
+            <div class="judges-section" id="sb-judges-container">
+                <script>
+                    for(let i=1; i<=10; i++) {
+                        document.write(`
+                            <div class="panel judge-box offline" id="sb-card-${i}">
+                                <div class="judge-label">JURI ${i}:</div>
+                                <div class="judge-score" id="sbj-${i}">9.90</div>
+                            </div>
+                        `);
+                    }
+                </script>
+            </div>
+            
+        </div>
+
+        <!-- ================= COMPARISON VIEW (MATCH FINISHED) ================= -->
+        <div id="sb-comparison-view">
+            <div class="header-title-main text-gradient-gold" style="margin-bottom: 0.5vh; margin-top: 1vh;">HASIL PERTANDINGAN</div>
+            <div class="header-title-sub text-gradient-gold" style="font-size: 2.2vh; letter-spacing: 2px;">
+                PARTAI <span id="sb-comp-partai"></span> • <span id="sb-comp-kategori-full"></span>
+            </div>
+            
+            <div class="comp-container">
+                <!-- Sudut Biru -->
+                <div class="comp-box comp-biru" id="box-comp-biru">
+                    <img id="comp-biru-img" src="https://iili.io/CShnhS2.png" style="height: 12vh; border-radius: 10px; border: 3px solid #007bff; margin-bottom: 1vh;">
+                    <h2 id="comp-biru-nama" style="font-size: 3vh; color:#fff; text-align: center;">NAMA BIRU</h2>
+                    <p id="comp-biru-kont" style="font-size: 2vh; color:#aaa; text-align: center;">KONTINGEN BIRU</p>
+                    
+                    <div class="comp-score-big text-gradient-gold" id="comp-biru-final">0.000</div>
+                    
+                    <div class="result-details">
+                        <div style="font-size: 2.2vh; color: #ccc;">STANDAR DEVIASI: <span id="comp-biru-stdev" style="color:#fff; font-family: 'Share Tech Mono', monospace;">0.000000</span></div>
+                        <div style="font-size: 2.2vh; color: #ccc;">WAKTU: <span id="comp-biru-waktu" style="color:#fff; font-family: 'Share Tech Mono', monospace;">00:00.00</span></div>
+                    </div>
+                </div>
+
+                <!-- Sudut Merah -->
+                <div class="comp-box comp-merah" id="box-comp-merah">
+                    <img id="comp-merah-img" src="https://iili.io/CShnhS2.png" style="height: 12vh; border-radius: 10px; border: 3px solid #e74c3c; margin-bottom: 1vh;">
+                    <h2 id="comp-merah-nama" style="font-size: 3vh; color:#fff; text-align: center;">NAMA MERAH</h2>
+                    <p id="comp-merah-kont" style="font-size: 2vh; color:#aaa; text-align: center;">KONTINGEN MERAH</p>
+                    
+                    <div class="comp-score-big text-gradient-gold" id="comp-merah-final">0.000</div>
+                    
+                    <div class="result-details">
+                        <div style="font-size: 2.2vh; color: #ccc;">STANDAR DEVIASI: <span id="comp-merah-stdev" style="color:#fff; font-family: 'Share Tech Mono', monospace;">0.000000</span></div>
+                        <div style="font-size: 2.2vh; color: #ccc;">WAKTU: <span id="comp-merah-waktu" style="color:#fff; font-family: 'Share Tech Mono', monospace;">00:00.00</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="comp-winner panel border-gold" id="comp-winner-box">
+                <div style="font-size: 2vh; color: #fff; font-weight: 600; letter-spacing: 1px;">PEMENANG PARTAI <span id="win-partai">-</span></div>
+                <div style="font-size: 2vh; color: var(--text-gold-light); font-weight: 700; margin-bottom: 1vh; letter-spacing: 1px;" id="win-kategori">-</div>
+                <div class="text-gradient-gold" style="font-size: 4.5vh; font-weight: 800; line-height: 1.2;" id="comp-winner-name">-</div>
+                <div style="font-size: 2.5vh; color: #ccc; font-weight: 600; text-transform: uppercase;" id="comp-winner-cont">-</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPT FIREBASE & LOGIC -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAaQLzv_-ILHZpin2z558OrecHtlW8P88c",
+            authDomain: "tgripsiambon.firebaseapp.com",
+            databaseURL: "https://tgripsiambon-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "tgripsiambon",
+            storageBucket: "tgripsiambon.firebasestorage.app",
+            messagingSenderId: "835345452490",
+            appId: "1:835345452490:web:7ea41998ee906fdde39333"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // State Variables
+        let globalMatchData = [];
+        let globalRekapData = [];
+        let activeMatchInfo = { partai: 0, side: '', name: '', cont: '', kategori: '', img: '' };
+        let juriStatusData = {};
+        
+        let globalStDev = 0;
+        let globalMedian = 0;
+        let penaltyDewan = 0;
+        let finalScoreValue = 0;
+        let prevPinaltyStates = {};
+
+        let startTime;
+        let elapsedTime = 0;
+        let timerInterval;
+
+        // Listener Firebase Realtime
+        db.ref('matches').on('value', (snapshot) => {
+            const data = snapshot.val();
+            globalMatchData = data ? Object.keys(data).map(key => ({ partai: key, ...data[key] })) : [];
+            updateScoreboardView();
+        });
+
+        db.ref('rekap').on('value', (snapshot) => {
+            const data = snapshot.val();
+            globalRekapData = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
+            updateScoreboardView();
+        });
+
+        db.ref('activeMatch').on('value', (snapshot) => {
+            const val = snapshot.val();
+            if(val) {
+                activeMatchInfo = val;
+                updateScoreboardView();
+            }
+        });
+
+        db.ref('juriStatus').on('value', (snapshot) => {
+            juriStatusData = snapshot.val() || {};
+            updateJuriStatusInScoreboard();
+            db.ref('scores').once('value', (snap) => calculateGlobalScores(snap.val()));
+        });
+
+        db.ref('scores').on('value', (snapshot) => {
+            calculateGlobalScores(snapshot.val());
+        });
+
+        db.ref('timer').on('value', (snapshot) => {
+            const val = snapshot.val();
+            if(val) {
+                elapsedTime = val.elapsedTime;
+                updateTimerDisplays(elapsedTime);
+                
+                if(val.isRunning) {
+                    if(!timerInterval) {
+                        startTime = Date.now() - elapsedTime;
+                        timerInterval = setInterval(() => {
+                            elapsedTime = Date.now() - startTime;
+                            updateTimerDisplays(elapsedTime);
+                        }, 10);
+                    }
+                } else {
+                    if(timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+                }
+            }
+        });
+
+        // Function Timer
+        function updateTimerDisplays(time) {
+            let mins = Math.floor(time / 60000);
+            let secs = Math.floor((time % 60000) / 1000);
+            let ms = Math.floor((time % 1000) / 10);
+            
+            let formatted = (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs) + "." + (ms < 10 ? "0" + ms : ms);
+            
+            document.querySelectorAll('.timer-shared').forEach(el => { el.innerText = formatted; });
+        }
+
+        // Function Hitung Nilai
+        function calculateGlobalScores(scores) {
+            if(!scores) return;
+            
+            let totalJuriPen = 0;
+            let juriValuesForAvg = [];
+            let allJuriValues = [];
+
+            for(let i=1; i<=10; i++) {
+                let s = scores['juri'+i] || { score: 9.90, penalty: 0, stamina: 0, jurus: 1 };
+                const sbjEl = document.getElementById('sbj-'+i);
+                
+                if(sbjEl) sbjEl.innerText = s.score.toFixed(2);
+
+                if (prevPinaltyStates[i] !== undefined && s.penalty > prevPinaltyStates[i]) {
+                    const card = document.getElementById('sb-card-'+i);
+                    if(card) {
+                        card.classList.remove('flash-pinalty');
+                        void card.offsetWidth; 
+                        card.classList.add('flash-pinalty');
+                        setTimeout(() => { card.classList.remove('flash-pinalty'); }, 1000);
+                    }
+                }
+                prevPinaltyStates[i] = s.penalty;
+
+                totalJuriPen += s.penalty;
+                allJuriValues.push(s.score);
+
+                if(juriStatusData['juri'+i] === true) {
+                    juriValuesForAvg.push(s.score);
+                }
+            }
+
+            let averageScore = 0;
+            if(juriValuesForAvg.length > 0) {
+                averageScore = juriValuesForAvg.reduce((a,b) => a+b, 0) / juriValuesForAvg.length;
+            }
+
+            const sorted = [...allJuriValues].sort((a,b) => a-b);
+            globalMedian = (sorted[4] + sorted[5]) / 2;
+            const meanFull = allJuriValues.reduce((a,b) => a+b, 0) / 10;
+            globalStDev = Math.sqrt(allJuriValues.map(x => Math.pow(x - meanFull, 2)).reduce((a,b) => a+b, 0) / 10);
+            
+            document.getElementById('sb-stdev').innerText = globalStDev.toFixed(11);
+            document.getElementById('sb-median').innerText = averageScore.toFixed(3);
+            document.getElementById('sb-pen-juri').innerText = totalJuriPen.toFixed(2);
+
+            penaltyDewan = scores.dewanPenalty || 0;
+            document.getElementById('sb-pen-dewan').innerText = penaltyDewan.toFixed(2);
+
+            finalScoreValue = averageScore - penaltyDewan; 
+            document.getElementById('sb-final-score').innerText = finalScoreValue.toFixed(3);
+        }
+
+        // Update indikator Juri
+        function updateJuriStatusInScoreboard() {
+            for(let i=1; i<=10; i++) {
+                const card = document.getElementById('sb-card-'+i);
+                if(card) {
+                    const isOnline = juriStatusData['juri'+i] === true;
+                    if(isOnline) card.classList.remove('offline');
+                    else card.classList.add('offline');
+                }
+            }
+        }
+
+        // Logic View Match & View Comparison
+        function updateScoreboardView() {
+            const info = activeMatchInfo;
+            if(!info || !info.partai) return;
+
+            const match = globalMatchData.find(m => m.partai == info.partai);
+            const sbSingle = document.getElementById('sb-single-view');
+            const sbComp = document.getElementById('sb-comparison-view');
+            const bodyEl = document.body;
+
+            if (match && match.redStatus === 'finish' && match.blueStatus === 'finish') {
+                if(sbSingle) sbSingle.style.display = 'none';
+                if(sbComp) sbComp.style.display = 'flex';
+                
+                bodyEl.className = '';
+
+                // Membangun text detail pertandingan
+                let kat = match.kategori || info.kategori || '';
+                let gen = match.gender || match.jk || '';
+                let gol = match.golongan || match.kelas || match.usia || '';
+                let fullKategori = `${kat} ${gen} ${gol}`.toUpperCase().replace(/\s+/g, ' ').trim();
+
+                const recaps = globalRekapData.filter(r => r.partai == info.partai);
+                // Mengurutkan timestamp dari rekap untuk mengambil data valid terakhir (jika ada update/simpan ulang)
+                recaps.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+                const rMerah = recaps.find(r => r.name === match.namaMerah) || {};
+                const rBiru = recaps.find(r => r.name === match.namaBiru) || {};
+
+                // Prioritaskan nilai dari DB Match (operator simpan manual) / fallback ke rekap
+                let valBiru = match.blueScore !== undefined ? match.blueScore : (rBiru.final !== undefined ? rBiru.final : 0);
+                let valMerah = match.redScore !== undefined ? match.redScore : (rMerah.final !== undefined ? rMerah.final : 0);
+                
+                let finalBiru = parseFloat(valBiru) || 0;
+                let finalMerah = parseFloat(valMerah) || 0;
+                let waktuB = match.waktuBiru || rBiru.waktu || '00:00.00';
+                let waktuM = match.waktuMerah || rMerah.waktu || '00:00.00';
+                
+                let stdevB = rBiru.stdev !== undefined ? parseFloat(rBiru.stdev) : 0;
+                let stdevM = rMerah.stdev !== undefined ? parseFloat(rMerah.stdev) : 0;
+
+                // Terapkan ke elemen UI
+                document.getElementById('sb-comp-partai').innerText = info.partai;
+                document.getElementById('sb-comp-kategori-full').innerText = fullKategori;
+                
+                // SUDUT BIRU POPULATE
+                document.getElementById('comp-biru-img').src = match.imgBiru || 'https://iili.io/CShnhS2.png';
+                document.getElementById('comp-biru-nama').innerText = match.namaBiru || '-';
+                document.getElementById('comp-biru-kont').innerText = match.kontBiru || '-';
+                document.getElementById('comp-biru-final').innerText = finalBiru.toFixed(3);
+                document.getElementById('comp-biru-waktu').innerText = waktuB;
+                document.getElementById('comp-biru-stdev').innerText = stdevB.toFixed(6);
+                
+                // SUDUT MERAH POPULATE
+                document.getElementById('comp-merah-img').src = match.imgMerah || 'https://iili.io/CShnhS2.png';
+                document.getElementById('comp-merah-nama').innerText = match.namaMerah || '-';
+                document.getElementById('comp-merah-kont').innerText = match.kontMerah || '-';
+                document.getElementById('comp-merah-final').innerText = finalMerah.toFixed(3);
+                document.getElementById('comp-merah-waktu').innerText = waktuM;
+                document.getElementById('comp-merah-stdev').innerText = stdevM.toFixed(6);
+
+                // PENENTUAN PEMENANG & EFEK KOTAK MENYALA (GLOW)
+                let winnerName = "-";
+                let winnerCont = "-";
+                
+                const boxBiru = document.getElementById('box-comp-biru');
+                const boxMerah = document.getElementById('box-comp-merah');
+                
+                // Reset styling glow terlebih dahulu
+                boxBiru.classList.remove('winner-glow');
+                boxMerah.classList.remove('winner-glow');
+
+                if(finalBiru > finalMerah) { 
+                    winnerName = match.namaBiru; 
+                    winnerCont = match.kontBiru;
+                    boxBiru.classList.add('winner-glow'); // Tambah efek glow kuning keemasan untuk kotak Biru
+                }
+                else if(finalMerah > finalBiru) { 
+                    winnerName = match.namaMerah; 
+                    winnerCont = match.kontMerah;
+                    boxMerah.classList.add('winner-glow'); // Tambah efek glow kuning keemasan untuk kotak Merah
+                }
+                else { 
+                    winnerName = "DRAW / SERI"; 
+                    winnerCont = "-";
+                }
+                
+                document.getElementById('win-partai').innerText = info.partai;
+                document.getElementById('win-kategori').innerText = fullKategori;
+                document.getElementById('comp-winner-name').innerText = winnerName;
+                document.getElementById('comp-winner-cont').innerText = winnerCont;
+
+            } else {
+                if(sbSingle) sbSingle.style.display = 'flex';
+                if(sbComp) sbComp.style.display = 'none';
+                
+                bodyEl.className = '';
+                if (info.side === 'biru') {
+                    bodyEl.classList.add('theme-biru');
+                } else if (info.side === 'merah') {
+                    bodyEl.classList.add('theme-merah');
+                }
+
+                document.getElementById('sb-partai').innerText = info.partai;
+                document.getElementById('sb-kategori').innerText = (info.kategori || '').toUpperCase();
+                document.getElementById('sb-name').innerText = (info.name || '').toUpperCase();
+                document.getElementById('sb-cont').innerText = (info.cont || '').toUpperCase();
+                document.getElementById('sb-avatar').src = info.img || 'https://iili.io/CShnhS2.png';
+            }
+        }
+    </script>
+</body>
+</html>
